@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Withdraw - AIMEME.IN</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#050505] text-white font-sans min-h-screen p-4">
+<div class="max-w-[400px] mx-auto">
+<a href="/" class="text-[12px] opacity-60">← Back to Feed</a>
+<h1 class="text-[24px] font-black tracking-[3px] mt-4">AIMEME<span class="text-[#FFD60A]">.</span>IN</h1>
+<h2 class="text-[18px] font-bold mt-6">💸 Withdraw Your Winnings</h2>
+
+<div id="rewardBox" class="mt-4 bg-gradient-to-br from-[#FFD60A]/20 to-[#FFB800]/10 border border-[#FFD60A]/30 rounded-[18px] p-5"></div>
+
+<div class="mt-6 bg-[#121212] rounded-[18px] p-5 border border-white/10">
+<p class="text-[12px] font-bold tracking-widest opacity-60">ENTER UPI ID</p>
+<input id="upiInput" placeholder="yourname@upi" class="w-full mt-3 p-4 bg-black rounded-xl border border-[#FFD60A]/30 outline-none">
+<input id="nameInput" placeholder="Your Full Name" class="w-full mt-3 p-4 bg-black rounded-xl border border-white/10 outline-none">
+<button onclick="submitWithdraw()" class="w-full mt-4 bg-[#FFD60A] text-black py-4 rounded-xl font-black text-[14px]">SUBMIT FOR APPROVAL</button>
+<p class="text-[10px] opacity-40 mt-2 text-center">Withdrawal will be approved within 24 hours</p>
+</div>
+
+<h3 class="font-bold mt-8">📋 Your Withdrawal History</h3>
+<div id="myHistory" class="mt-3 space-y-2"></div>
+</div>
+
+<script>
+let currentReward = JSON.parse(localStorage.getItem('current_reward')||'null');
+let withdraws = JSON.parse(localStorage.getItem('withdraws')||'[]');
+if(!currentReward){ currentReward={amount:10, type:'upi'}; }
+document.getElementById('rewardBox').innerHTML=`<div class="flex items-center gap-4"><div class="text-[48px]">💸</div><div><p class="text-[11px] tracking-widest opacity-60">WINNING AMOUNT</p><h1 class="text-[36px] font-black">₹${currentReward.amount}</h1><p class="text-[10px] bg-[#00FF88]/20 text-[#00FF88] px-2 py-1 rounded-full inline-block">READY TO WITHDRAW</p></div></div>`;
+
+function renderHistory(){
+document.getElementById('myHistory').innerHTML=withdraws.map((w,i)=>`
+<div class="bg-[#121212] p-4 rounded-xl border border-white/10 flex justify-between">
+<div><b>₹${w.amount}</b><div class="text-[11px] opacity-60">${w.upi} • ${w.name||''}</div><div class="text-[10px] opacity-40">${new Date(w.time).toLocaleString()}</div></div>
+<div class="text-right"><span class="text-[10px] px-3 py-1 rounded-full font-bold ${w.status==='approved'?'bg-green-500 text-black':w.status==='rejected'?'bg-red-500 text-white':'bg-[#FFD60A] text-black'}">${w.status.toUpperCase()}</span></div>
+</div>`).join('') || '<p class="text-[11px] opacity-30 text-center py-6">No withdrawals yet</p>';
+}
+function submitWithdraw(){
+let upi=document.getElementById('upiInput').value.trim();
+let name=document.getElementById('nameInput').value.trim();
+if(!upi.includes('@')) return alert('Sahi UPI ID daalo (name@upi)');
+if(!name) return alert('Naam daalo');
+let req={id:Date.now(), amount:currentReward.amount, upi, name, status:'pending', time:Date.now()};
+withdraws.unshift(req);
+localStorage.setItem('withdraws',JSON.stringify(withdraws));
+alert('✅ Withdrawal Submitted! Admin approval ke baad paisa ayega');
+renderHistory();
+document.getElementById('upiInput').value='';
+document.getElementById('nameInput').value='';
+}
+renderHistory();
+</script>
+</body>
+</html>
