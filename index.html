@@ -2,56 +2,76 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Withdraw - AIMEME.IN</title>
+<title>Withdrawal Admin - AIMEME</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
-<body class="bg-[#050505] text-white font-sans min-h-screen p-4">
-<div class="max-w-[400px] mx-auto">
-<a href="/" class="text-[12px] opacity-60">← Back to Feed</a>
-<h1 class="text-[24px] font-black tracking-[3px] mt-4">AIMEME<span class="text-[#FFD60A]">.</span>IN</h1>
-<h2 class="text-[18px] font-bold mt-6">💸 Withdraw Your Winnings</h2>
+<body class="bg-black text-white p-4">
+<div class="max-w-[600px] mx-auto">
+<h1 class="text-[22px] font-black">👑 AIMEME ADMIN</h1>
+<p class="text-[11px] opacity-50">withdrawal.html - Approval Panel</p>
+<a href="/" class="text-[11px] opacity-60 underline">← Back to AIMEME.IN</a>
 
-<div id="rewardBox" class="mt-4 bg-gradient-to-br from-[#FFD60A]/20 to-[#FFB800]/10 border border-[#FFD60A]/30 rounded-[18px] p-5"></div>
-
-<div class="mt-6 bg-[#121212] rounded-[18px] p-5 border border-white/10">
-<p class="text-[12px] font-bold tracking-widest opacity-60">ENTER UPI ID</p>
-<input id="upiInput" placeholder="yourname@upi" class="w-full mt-3 p-4 bg-black rounded-xl border border-[#FFD60A]/30 outline-none">
-<input id="nameInput" placeholder="Your Full Name" class="w-full mt-3 p-4 bg-black rounded-xl border border-white/10 outline-none">
-<button onclick="submitWithdraw()" class="w-full mt-4 bg-[#FFD60A] text-black py-4 rounded-xl font-black text-[14px]">SUBMIT FOR APPROVAL</button>
-<p class="text-[10px] opacity-40 mt-2 text-center">Withdrawal will be approved within 24 hours</p>
+<div class="flex gap-2 mt-5">
+<button onclick="setFilter('all')" id="bAll" class="px-4 py-2 bg-white/10 rounded-full text-[12px]">All</button>
+<button onclick="setFilter('pending')" id="bPending" class="px-4 py-2 bg-[#FFD60A] text-black rounded-full text-[12px] font-bold">Pending</button>
+<button onclick="setFilter('approved')" id="bApproved" class="px-4 py-2 bg-green-500/20 rounded-full text-[12px]">Approved</button>
+<button onclick="setFilter('failed')" id="bFailed" class="px-4 py-2 bg-red-500/20 rounded-full text-[12px]">Failed</button>
 </div>
 
-<h3 class="font-bold mt-8">📋 Your Withdrawal History</h3>
-<div id="myHistory" class="mt-3 space-y-2"></div>
+<div id="list" class="mt-6 space-y-3">Loading requests...</div>
 </div>
 
 <script>
-let currentReward = JSON.parse(localStorage.getItem('current_reward')||'null');
-let withdraws = JSON.parse(localStorage.getItem('withdraws')||'[]');
-if(!currentReward){ currentReward={amount:10, type:'upi'}; }
-document.getElementById('rewardBox').innerHTML=`<div class="flex items-center gap-4"><div class="text-[48px]">💸</div><div><p class="text-[11px] tracking-widest opacity-60">WINNING AMOUNT</p><h1 class="text-[36px] font-black">₹${currentReward.amount}</h1><p class="text-[10px] bg-[#00FF88]/20 text-[#00FF88] px-2 py-1 rounded-full inline-block">READY TO WITHDRAW</p></div></div>`;
+const firebaseConfig = {
+  apiKey: "AIzaSyDhZ6zYdaa0CD9r_HOtm5l7pBfkaxWeANY",
+  authDomain: "aimeme-5ebf5.firebaseapp.com",
+  databaseURL: "https://aimeme-5ebf5-default-rtdb.firebaseio.com",
+  projectId: "aimeme-5ebf5",
+  storageBucket: "aimeme-5ebf5.firebasestorage.app",
+  messagingSenderId: "67906916932",
+  appId: "1:67906916932:web:6bd44cb7d3e96e11916211"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-function renderHistory(){
-document.getElementById('myHistory').innerHTML=withdraws.map((w,i)=>`
-<div class="bg-[#121212] p-4 rounded-xl border border-white/10 flex justify-between">
-<div><b>₹${w.amount}</b><div class="text-[11px] opacity-60">${w.upi} • ${w.name||''}</div><div class="text-[10px] opacity-40">${new Date(w.time).toLocaleString()}</div></div>
-<div class="text-right"><span class="text-[10px] px-3 py-1 rounded-full font-bold ${w.status==='approved'?'bg-green-500 text-black':w.status==='rejected'?'bg-red-500 text-white':'bg-[#FFD60A] text-black'}">${w.status.toUpperCase()}</span></div>
-</div>`).join('') || '<p class="text-[11px] opacity-30 text-center py-6">No withdrawals yet</p>';
+let currentFilter='pending';
+let allData={};
+
+function setFilter(f){
+  currentFilter=f;
+  document.querySelectorAll('button[id^=b]').forEach(b=>b.className='px-4 py-2 bg-white/10 rounded-full text-[12px]');
+  document.getElementById('b'+f.charAt(0).toUpperCase()+f.slice(1)).className='px-4 py-2 bg-[#FFD60A] text-black rounded-full text-[12px] font-bold';
+  render();
 }
-function submitWithdraw(){
-let upi=document.getElementById('upiInput').value.trim();
-let name=document.getElementById('nameInput').value.trim();
-if(!upi.includes('@')) return alert('Sahi UPI ID daalo (name@upi)');
-if(!name) return alert('Naam daalo');
-let req={id:Date.now(), amount:currentReward.amount, upi, name, status:'pending', time:Date.now()};
-withdraws.unshift(req);
-localStorage.setItem('withdraws',JSON.stringify(withdraws));
-alert('✅ Withdrawal Submitted! Admin approval ke baad paisa ayega');
-renderHistory();
-document.getElementById('upiInput').value='';
-document.getElementById('nameInput').value='';
+
+function render(){
+  let filtered = currentFilter==='all'? Object.entries(allData) : Object.entries(allData).filter(([k,v])=>v.status===currentFilter);
+  document.getElementById('list').innerHTML=filtered.reverse().map(([key,w])=>`
+  <div class="bg-[#121212] p-4 rounded-[16px] border border-white/10">
+    <div class="flex justify-between items-start">
+      <div><b class="text-[#FFD60A] text-[16px]">₹${w.amount}</b><span class="ml-2 text-[13px] font-bold">${w.name||'User'}</span></div>
+      <span class="text-[10px] px-3 py-1 rounded-full font-black ${w.status==='pending'?'bg-[#FFD60A] text-black':w.status==='approved'?'bg-green-500 text-black':'bg-red-500 text-white'}">${w.status.toUpperCase()}</span>
+    </div>
+    <div class="mt-2 text-[13px]">UPI: <b class="bg-white/10 px-2 py-1 rounded">${w.upi}</b></div>
+    <div class="text-[10px] opacity-40 mt-1">${new Date(w.time).toLocaleString()}</div>
+    <div class="flex gap-2 mt-4">
+      <button onclick="approve('${key}')" class="flex-1 bg-green-500 text-black py-3 rounded-xl font-black text-[12px]">✅ APPROVED</button>
+      <button onclick="fail('${key}')" class="flex-1 bg-red-500 text-white py-3 rounded-xl font-black text-[12px]">❌ FAILED</button>
+      <button onclick="copyText('${w.upi}')" class="px-4 bg-white/10 rounded-xl text-[11px]">📋</button>
+    </div>
+  </div>`).join('') || `<p class="opacity-30 text-center py-10">No ${currentFilter} requests</p>`;
 }
-renderHistory();
+
+db.ref('withdrawals').on('value', snap=>{
+  allData=snap.val()||{};
+  render();
+});
+
+function approve(key){ db.ref('withdrawals/'+key).update({status:'approved'}).then(()=>alert('✅ Approved! User ko AIMEME.IN pe APPROVED dikhega')); }
+function fail(key){ db.ref('withdrawals/'+key).update({status:'failed'}).then(()=>alert('❌ Failed kar diya! User ko FAILED dikhega')); }
+function copyText(t){ navigator.clipboard.writeText(t); alert('Copied: '+t); }
 </script>
 </body>
 </html>
